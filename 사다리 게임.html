@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<!-- saved from url=(0047)file:///C:/Users/jio81/Desktop/ladder-game.html -->
+<html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>사다리 게임</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    min-height: 100vh;
+    color: #333;
+    padding: 24px;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    padding: 32px;
+  }
+  h1 {
+    text-align: center;
+    color: #1e3c72;
+    margin-bottom: 24px;
+    font-size: 32px;
+  }
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: #f5f7fa;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+  .controls label {
+    font-weight: 600;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .controls input, .controls select {
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    width: 80px;
+  }
+  .controls input:focus, .controls select:focus {
+    outline: none;
+    border-color: #2a5298;
+  }
+  .controls button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+  }
+  .btn-primary {
+    background: #2a5298;
+    color: white;
+  }
+  .btn-primary:hover { background: #1e3c72; }
+  .btn-secondary {
+    background: #e0e0e0;
+    color: #555;
+  }
+  .btn-secondary:hover { background: #ccc; }
+  .controls button:active { transform: translateY(1px); }
+
+  .game-area {
+    background: #fafbfc;
+    border-radius: 12px;
+    padding: 24px;
+    overflow-x: auto;
+  }
+  .ladder-wrapper { display: inline-block; min-width: 100%; }
+  .row-buttons { display: flex; }
+  .cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .player-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+  .player-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+  }
+  .player-btn:disabled {
+    cursor: default;
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  .result-label {
+    width: 64px;
+    height: 50px;
+    border-radius: 10px;
+    background: #ddd;
+    color: #555;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s ease;
+  }
+  .result-label.revealed { transform: scale(1.05); }
+  .result-label.revealed.win {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+  }
+  .result-label.revealed.lose {
+    background: #888;
+    color: white;
+  }
+
+  svg { display: block; }
+
+  .empty-msg {
+    text-align: center;
+    color: #888;
+    padding: 60px 20px;
+    font-size: 16px;
+  }
+
+  .results-panel {
+    margin-top: 24px;
+    padding: 20px;
+    background: #f5f7fa;
+    border-radius: 12px;
+    min-height: 80px;
+  }
+  .results-panel h3 {
+    color: #555;
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+  .result-item {
+    display: inline-block;
+    margin: 4px 8px 4px 0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    color: white;
+    animation: popIn 0.4s ease;
+  }
+  .result-item.win {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+  }
+  .result-item.lose { background: #888; }
+  @keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .empty-results { color: #888; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎯 사다리 게임</h1>
+
+  <div class="controls">
+    <label>인원
+      <select id="playerCount">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4" selected="">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+      </select>
+    </label>
+    <label>당첨 개수
+      <input type="number" id="winCount" min="1" max="4" value="1">
+    </label>
+    <button class="btn-primary" id="generateBtn">사다리 만들기</button>
+    <button class="btn-secondary" id="resetBtn">초기화</button>
+  </div>
+
+  <div class="game-area" id="gameArea"><p class="empty-msg">인원과 당첨 개수를 선택한 뒤 "사다리 만들기"를 눌러주세요.</p></div>
+
+  <div class="results-panel">
+    <h3>결과</h3>
+    <div id="resultsList" class="empty-results">아직 결과가 없습니다.</div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6BCB77', '#A66CFF', '#FF8C42', '#3498DB', '#E84393'];
+
+const state = {
+  playerCount: 4,
+  winCount: 1,
+  ladder: [],
+  results: [],
+  clicked: new Set(),
+  rows: 12
+};
+
+const playerCountEl = document.getElementById('playerCount');
+const winCountEl = document.getElementById('winCount');
+const generateBtn = document.getElementById('generateBtn');
+const resetBtn = document.getElementById('resetBtn');
+const gameArea = document.getElementById('gameArea');
+const resultsList = document.getElementById('resultsList');
+
+playerCountEl.addEventListener('change', () => {
+  const n = parseInt(playerCountEl.value);
+  winCountEl.max = n - 1;
+  if (parseInt(winCountEl.value) > n - 1) winCountEl.value = n - 1;
+  if (parseInt(winCountEl.value) < 1) winCountEl.value = 1;
+});
+
+generateBtn.addEventListener('click', generateLadder);
+
+resetBtn.addEventListener('click', () => {
+  gameArea.innerHTML = '<p class="empty-msg">인원과 당첨 개수를 선택한 뒤 "사다리 만들기"를 눌러주세요.</p>';
+  resultsList.innerHTML = '아직 결과가 없습니다.';
+  resultsList.className = 'empty-results';
+  state.clicked.clear();
+});
+
+function generateLadder() {
+  const n = parseInt(playerCountEl.value);
+  let w = parseInt(winCountEl.value);
+  if (isNaN(w) || w < 1) w = 1;
+  if (w > n - 1) w = n - 1;
+  winCountEl.value = w;
+
+  state.playerCount = n;
+  state.winCount = w;
+  state.clicked.clear();
+  state.rows = Math.max(8, n * 2);
+
+  // generate rungs (no two adjacent in same row)
+  state.ladder = [];
+  for (let r = 0; r < state.rows; r++) {
+    const row = new Array(n - 1).fill(false);
+    for (let c = 0; c < n - 1; c++) {
+      if (Math.random() < 0.45 && (c === 0 || !row[c - 1])) {
+        row[c] = true;
+      }
+    }
+    state.ladder.push(row);
+  }
+
+  // shuffled results
+  const arr = [];
+  for (let i = 0; i < w; i++) arr.push('win');
+  for (let i = w; i < n; i++) arr.push('lose');
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  state.results = arr;
+
+  resultsList.innerHTML = '';
+  resultsList.className = '';
+
+  render();
+}
+
+function render() {
+  const n = state.playerCount;
+  const colSpacing = 90;
+  const totalWidth = colSpacing * n;
+  const rowHeight = 28;
+  const ladderHeight = rowHeight * (state.rows + 1);
+  const xFor = c => (c + 0.5) * colSpacing;
+
+  let html = '<div class="ladder-wrapper" style="width:' + totalWidth + 'px;">';
+
+  // top buttons
+  html += '<div class="row-buttons">';
+  for (let i = 0; i < n; i++) {
+    html += '<div class="cell" style="width:' + colSpacing + 'px;">';
+    html += '<button class="player-btn" data-col="' + i + '" style="background:' + COLORS[i] + ';">' + (i + 1) + '</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // SVG ladder
+  html += '<svg width="' + totalWidth + '" height="' + ladderHeight + '" id="ladderSvg" style="margin: 8px 0;">';
+  for (let i = 0; i < n; i++) {
+    const x = xFor(i);
+    html += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + ladderHeight + '" stroke="#bbb" stroke-width="3" stroke-linecap="round"/>';
+  }
+  for (let r = 0; r < state.rows; r++) {
+    const y = (r + 1) * rowHeight;
+    for (let c = 0; c < n - 1; c++) {
+      if (state.ladder[r][c]) {
+        const x1 = xFor(c);
+        const x2 = xFor(c + 1);
+        html += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#bbb" stroke-width="3" stroke-linecap="round"/>';
+      }
+    }
+  }
+  html += '<g id="pathLayer"></g>';
+  html += '</svg>';
+
+  // bottom labels
+  html += '<div class="row-buttons">';
+  for (let i = 0; i < n; i++) {
+    html += '<div class="cell" style="width:' + colSpacing + 'px;">';
+    html += '<div class="result-label" data-col="' + i + '">?</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  html += '</div>';
+
+  gameArea.innerHTML = html;
+
+  document.querySelectorAll('.player-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const col = parseInt(btn.dataset.col);
+      if (state.clicked.has(col)) return;
+      state.clicked.add(col);
+      btn.disabled = true;
+      tracePath(col);
+    });
+  });
+}
+
+function tracePath(startCol) {
+  const n = state.playerCount;
+  const colSpacing = 90;
+  const rowHeight = 28;
+  const ladderHeight = rowHeight * (state.rows + 1);
+  const xFor = c => (c + 0.5) * colSpacing;
+
+  const points = [];
+  let col = startCol;
+  let x = xFor(col);
+  points.push([x, 0]);
+
+  for (let r = 0; r < state.rows; r++) {
+    const yRung = (r + 1) * rowHeight;
+    points.push([x, yRung]);
+    if (col > 0 && state.ladder[r][col - 1]) {
+      col -= 1;
+      x = xFor(col);
+      points.push([x, yRung]);
+    } else if (col < n - 1 && state.ladder[r][col]) {
+      col += 1;
+      x = xFor(col);
+      points.push([x, yRung]);
+    }
+  }
+  points.push([x, ladderHeight]);
+
+  const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0] + ',' + p[1]).join(' ');
+  const color = COLORS[startCol];
+
+  const svg = document.getElementById('ladderSvg');
+  const ns = 'http://www.w3.org/2000/svg';
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', pathD);
+  path.setAttribute('stroke', color);
+  path.setAttribute('stroke-width', '5');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('opacity', '0.85');
+  svg.querySelector('#pathLayer').appendChild(path);
+
+  const length = path.getTotalLength();
+  path.style.strokeDasharray = length;
+  path.style.strokeDashoffset = length;
+  path.style.transition = 'stroke-dashoffset 1.6s ease-in-out';
+  path.getBoundingClientRect(); // force reflow
+  path.style.strokeDashoffset = '0';
+
+  setTimeout(() => {
+    const labels = document.querySelectorAll('.result-label');
+    const finalCol = col;
+    const result = state.results[finalCol];
+    const labelEl = labels[finalCol];
+    labelEl.classList.add('revealed', result);
+    labelEl.textContent = result === 'win' ? '당첨' : '꽝';
+
+    const item = document.createElement('span');
+    item.className = 'result-item ' + result;
+    item.textContent = (startCol + 1) + '번 → ' + (result === 'win' ? '당첨 🎉' : '꽝');
+    resultsList.appendChild(item);
+  }, 1600);
+}
+
+// init
+winCountEl.max = parseInt(playerCountEl.value) - 1;
+</script>
+
+
+</body></html>
